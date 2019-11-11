@@ -17,7 +17,7 @@
 
 之后打开demo.sh文件修改里面的数据库链接字符串类似：
 
-# apollo config db info
+#### apollo config db info
 
 apollo_config_db_url=jdbc:mysql://localhost:33061/ApolloConfigDB?characterEncoding=utf8（修改成自己的）
 
@@ -25,7 +25,7 @@ apollo_config_db_username=root（修改成自己的）
 
 apollo_config_db_password=root（修改成自己的）
 
-# apollo portal db info
+#### apollo portal db info
 
 apollo_portal_db_url=jdbc:mysql://localhost:33061/ApolloPortalDB?characterEncoding=utf8（修改成自己的）
 
