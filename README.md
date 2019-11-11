@@ -37,9 +37,24 @@ apollo_portal_db_password=root（修改成自己的）
 
 Apollo不用的时候在命令行输入：./demo.sh stop
 
-## 2、接下来就是启动Consul,一样需要下载可以用上面的百度云链接中下载或者去：https://github.com/hashicorp/consul 下载。
+## 2、接下来就是启动Consul服务发现,一样需要下载可以用上面的百度云链接中下载或者去：https://github.com/hashicorp/consul 下载。
 
 ### 不过我建议直接用我那个百度云，因为那里面我写了一个开发环境的简单启动命令行。文件夹内有一个start文件，直接在命令行中执行：./start
+
+浏览器访问：http://localhost:8500/ui/ ，如果能出来consul界面就是启动成功了。
+
+## 3、接下来启动src内的所有AspNetCore项目都直接命令行执行：dotnet run 就好了。
+
+### 可以先把所有的AspNetCore项目都启动起来，然后去http://localhost:8500/ui/ 看看services列表是不是应该增加了三个服务。目前我没有把网关加入服务。
+
+### ApiGateServer
+
+Ocelot的网关是直接可以与consul服务发现配合的，而且这里我用的动态路由具体的内容请看找到ApiGateServer/ocelot.json
+
+一般在网关这里会直接用鉴权，所以我在项目内引用了JWT,项目地址：https://github.com/jwt-dotnet/jwt
+
+### Auth
+
 
 
 
