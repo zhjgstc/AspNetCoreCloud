@@ -1,0 +1,47 @@
+{
+  "ReRoutes": [
+
+  ],
+  "Aggregates": [
+
+  ],
+  "GlobalConfiguration": {
+    "RequestIdKey": null,
+    "ServiceDiscoveryProvider": {
+      "Host": "localhost",
+      "Port": 8500,
+      "Type": "Consul",
+      "Token": null,
+      "ConfigurationKey": null
+    },
+    "RateLimitOptions": {
+      //"ClientWhitelist": [ "admin" ], // 白名单
+      "EnableRateLimiting": true, // 是否启用限流
+      "Period": "1s", // 统计时间段：1s, 5m, 1h, 1d
+      "PeriodTimespan": 15, // 多少秒之后客户端可以重试
+      "Limit": 500, // 在统计时间段内允许的最大请求数量
+      "ClientIdHeader": "ClientId",
+      "QuotaExceededMessage": null,
+      "RateLimitCounterPrefix": "ocelot",
+      "DisableRateLimitHeaders": false,
+      "HttpStatusCode": 429
+    },
+    "QoSOptions": {
+      "ExceptionsAllowedBeforeBreaking": 0,
+      "DurationOfBreak": 0,
+      "TimeoutValue": 0
+    },
+    "BaseUrl": null,
+    "LoadBalancerOptions": {
+      "Type": "RoundRobin",
+      "Key": null,
+      "Expiry": 0
+    },
+    "DownstreamScheme": "http",
+    "HttpHandlerOptions": {
+      "AllowAutoRedirect": false,
+      "UseCookieContainer": false,
+      "UseTracing": false
+    }
+  }
+}

@@ -1,0 +1,14 @@
+src/ApiGateServer/bin
+src/ApiGateServer/obj
+src/ApiGateServer/.vs
+src/AuthService/bin
+src/AuthService/obj
+src/AuthService/.vs
+src/ProductService/bin
+src/ProductService/obj
+src/ProductService/.vs
+src/OrderService/bin
+src/OrderService/obj
+src/OrderService/.vs
+apollo-quick-start-1.5.0
+consul-1.6.0
