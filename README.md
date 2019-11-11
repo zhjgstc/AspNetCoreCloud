@@ -46,7 +46,13 @@ Apollo不用的时候在命令行输入：./demo.sh stop
 
 浏览器访问：http://localhost:8500/ui/ ，如果能出来consul界面就是启动成功了。
 
-## 3、接下来启动src内的所有AspNetCore项目都直接命令行执行：dotnet run 就好了。
+## 3、链路追踪Zipkin
+
+运行一个Zipkin : docker run -d -p 9411:9411 openzipkin/zipkin 
+
+除docker外其他的启动方式：https://zipkin.io/ ，运行起来后先访问最后我们整个项目都跑一遍后回来看效果。
+
+## 4、接下来启动src内的所有AspNetCore项目都直接命令行执行：dotnet run 就好了。
 
 ### 可以先把所有的AspNetCore项目都启动起来，然后去http://localhost:8500/ui/ 看看services列表是不是应该增加了三个服务。目前我没有把网关加入服务。
 
@@ -54,9 +60,31 @@ Apollo不用的时候在命令行输入：./demo.sh stop
 
 Ocelot的网关是直接可以与consul服务发现配合的，而且这里我用的动态路由具体的内容请看找到ApiGateServer/ocelot.json
 
+所有的访问链接
+
 一般在网关这里会直接用鉴权，所以我在项目内引用了JWT,项目地址：https://github.com/jwt-dotnet/jwt
 
-### Auth
+如果浏览器访问：http://localhost:10000/home/index或者http://localhost:10000/order/add就会被拦截请求，返回一个jwt的token。
+
+实际情况应该是拦截请求返回未登录，jwt token应该通过AuthService进行登录验证后返回。这个可以自行改造。
+
+### AuthService
+
+AuthService内有TestController/Index使用了Polly，可以去查看。
+
+因为我们启动了网关，所有的service都可以通过网关来请求。浏览器访问：http://localhost:10000/authservice/test/index 就可以查看效果了。也可以vs来调试启动AuthService，在TestController/Index中加入一些断点来看效果更佳。
+
+### OrderService
+
+这个服务内我加入来Get和Post两种方式的服务消费，就是OrderService中去访问AuthService和ProductService。
+
+浏览器访问：http://localhost:10000/orderservice/home/test   这个是get请求的服务消费
+
+浏览器访问：http://localhost:10000/orderservice/home/testpost 这个是post请求的服务消费
+
+### 最后我们浏览器访问：http://localhost:9411/ 来查看链路
+
+#### 未完待续
 
 
 
