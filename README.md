@@ -84,7 +84,7 @@ AuthService内有TestController/Index使用了Polly，可以去查看。
 
 ### 最后我们浏览器访问：http://localhost:9411/ 来查看链路
 
-#### 未完待续
+#### 未完待续 .后续先录个视频，目前我这个部分的内容都是开发环境的架构。如果用到生产环境应该要使用docker。录制视频后我就去把各类服务打包成为docker镜像。
 
 
 
