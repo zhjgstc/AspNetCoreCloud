@@ -4,13 +4,14 @@
 
 ## 目录结构
 
-### apollo-quick-start-1.5.0/sql文件夹是存放我自己建立的Apollo项目，如果所有的src内的代码都没有改变就希望能跑起来的话就需要将Sql文件导入到Apollo
+apollo-quick-start-1.5.0/sql文件夹是存放我自己建立的Apollo项目，如果所有的src内的代码都没有改变就希望能跑起来的话就需要将Sql文件导入到Apollo
 
-### src目录内是ApiGateServer网关、AuthService权限微服、OrderService订单微服、ProductService产品微服
+src目录内是ApiGateServer网关、AuthService权限微服、OrderService订单微服、ProductService产品微服
 
-### 配置中心及服务发现 https://pan.baidu.com/s/1FSLrnJBqc8rRN6RHn_CmHw
+配置中心及服务发现 https://pan.baidu.com/s/1FSLrnJBqc8rRN6RHn_CmHw
 
 ## 1、Apollo首先需要启动配置中心
+
 ### 因为配置中心启动包有点大上传到github上会单个文件超出100mb出错，所以我放在了上面的百度云链接中。可以直接下载或者去:https://github.com/ctripcorp/apollo 下载。
 
 启动Apollo需要Java 1.8或更高版本，MySQL5.6.6或更高版本。
