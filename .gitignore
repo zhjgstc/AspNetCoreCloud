@@ -1,6 +1,6 @@
 **/.vs
 **/bin
 **/obj
-apollo-quick-start-1.5.0
+apollo-quick-start-1.5.0/*
 !apollo-quick-start-1.5.0/sql/
 consul-1.6.0
