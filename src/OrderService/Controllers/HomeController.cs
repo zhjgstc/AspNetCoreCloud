@@ -18,7 +18,7 @@ namespace OrderService.Controllers
         private readonly ILogger<HomeController> _logger;
         private IConfiguration _configuration;
 
-        public HomeController(ILogger<HomeController> logger,IConfiguration configuration)
+        public HomeController(ILogger<HomeController> logger, IConfiguration configuration)
         {
             _logger = logger;
             _configuration = configuration;
@@ -53,7 +53,7 @@ namespace OrderService.Controllers
             var consulService = new ConsulService(_configuration);
 
             var user = new User() { Name = "123", Age = "456" };
-            content += consulService.PostAsync("ProductService", "home/add", JsonConvert.SerializeObject(new {a="aaa",b="bbb" })).Result;
+            content += consulService.PostAsync("ProductService", "home/add", JsonConvert.SerializeObject(new { a = "aaa", b = "bbb" })).Result;
             content += "\n";
             content += consulService.PostAsync("ProductService", "home/new", JsonConvert.SerializeObject(user)).Result;
 
