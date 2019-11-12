@@ -50,7 +50,7 @@ Apollo不用的时候在命令行输入：./demo.sh stop
 
 运行一个Zipkin : docker run -d -p 9411:9411 openzipkin/zipkin 
 
-除docker外其他的启动方式：https://zipkin.io/ ，运行起来后先访问最后我们整个项目都跑一遍后回来看效果。
+除docker外其他的启动方式：https://zipkin.io/ ，运行起来后先浏览器访问：http://localhost:9411/ ，最后等我们整个项目都跑一遍后回来看效果。
 
 ## 4、接下来启动src内的所有AspNetCore项目都直接命令行执行：dotnet run 就好了。
 
