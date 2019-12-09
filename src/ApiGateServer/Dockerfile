@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/aspnet:2.1
+FROM mcr.microsoft.com/dotnet/core/aspnet:3.0 AS runtime
 WORKDIR /app
-COPY bin/Release/netcoreapp2.1/publish/* ./
+COPY bin/Debug/netcoreapp3.0/linux-x64/* ./
 ENTRYPOINT ["dotnet", "ApiGateServer.dll"]

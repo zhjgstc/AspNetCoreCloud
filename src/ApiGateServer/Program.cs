@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -18,14 +17,11 @@ namespace ApiGateServer
             CreateHostBuilder(args).Build().Run();
         }
 
-        public static IWebHostBuilder CreateHostBuilder(string[] args)
-        {
-            var configuration = new ConfigurationBuilder().SetBasePath(Environment.CurrentDirectory)
-                                          .AddJsonFile("appsettings.json")
-                                          .Build();
-            var url = $"http://*:" + configuration["Port"];
-            return WebHost.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((context, builder) =>
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.ConfigureAppConfiguration((context, builder) =>
             {
                 builder.SetBasePath(context.HostingEnvironment.ContentRootPath)
                 .AddJsonFile("Ocelot.json");
@@ -33,9 +29,7 @@ namespace ApiGateServer
                     .AddDefault()
                     .AddNamespace("application");
 
-            })
-            .UseUrls(url).UseStartup<Startup>();
-        }
-           
+            }).UseStartup<Startup>();
+                });
     }
 }
