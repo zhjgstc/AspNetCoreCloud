@@ -4,7 +4,7 @@
 
 ### 视频介绍地址：https://www.ixigua.com/i6758305674041508360/
 
-### docker容器化介绍：地址上传中
+### docker容器化介绍：https://www.ixigua.com/i6768731822999208462/
 
 ## 目录结构
 
