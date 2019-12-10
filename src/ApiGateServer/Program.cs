@@ -17,8 +17,13 @@ namespace ApiGateServer
             CreateHostBuilder(args).Build().Run();
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
+        public static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            var configuration = new ConfigurationBuilder().SetBasePath(Environment.CurrentDirectory)
+                                                       .AddJsonFile("appsettings.json")
+                                                       .Build();
+            var url = $"http://*:" + configuration["Port"];
+            return Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.ConfigureAppConfiguration((context, builder) =>
@@ -29,7 +34,8 @@ namespace ApiGateServer
                     .AddDefault()
                     .AddNamespace("application");
 
-            }).UseStartup<Startup>();
+            }).UseUrls(url).UseStartup<Startup>();
                 });
+        }
     }
 }

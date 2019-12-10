@@ -36,9 +36,12 @@ namespace OrderService
             {
                 app.UseDeveloperExceptionPage();
             }
+            else
+            {
+                app.RegisterConsul(lifetime, Configuration["consul.address"], Configuration["consul.port"], Configuration["AppName"], "localhost", Configuration["Port"], $"/home/health");
+            }
 
-            app.RegisterConsul(lifetime, Configuration["consul.address"],Configuration["consul.port"], Configuration["AppName"], "localhost", Configuration["Port"], $"/home/health");
-            app.UserZipkinCore(lifetime, loggerFactory,Configuration["zipkin.address"], Configuration["AppName"] + "_" + Utils.LocalNetWorkIP());
+            app.UserZipkinCore(lifetime, loggerFactory, Configuration["zipkin.address"], Configuration["AppName"] + "_" + Utils.LocalNetWorkIP());
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();

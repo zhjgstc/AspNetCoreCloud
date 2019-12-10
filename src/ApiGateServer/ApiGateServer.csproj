@@ -19,4 +19,9 @@
     <Folder Include="Extension\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Ocelot.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
