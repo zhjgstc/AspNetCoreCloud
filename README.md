@@ -90,6 +90,12 @@ AuthService内有TestController/Index使用了Polly，可以去查看。
 
 ### 最后我们浏览器访问：http://localhost:9411/ 来查看链路
 
+## 5、Exceptionless日志收集
+
+### 通过命令行进入Exceptionless-5.0.0目录，修改docker-compose.yml内带192.168.31.185的ip，改成自己能访问得到的。如果是本地的直接改成localhost也可以。
+
+其他具体的Exceptionless可以参考官方说明，后续我会录个视频说明一下搭建和发布。
+
 
 
 
