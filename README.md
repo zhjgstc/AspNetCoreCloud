@@ -6,6 +6,8 @@
 
 ### docker容器化介绍：https://www.ixigua.com/i6768731822999208462/
 
+### Exceptionless视频介绍：https://www.ixigua.com/6861844321620984333/
+
 ## 目录结构
 
 apollo-quick-start-1.5.0/sql文件夹是存放我自己建立的Apollo项目，如果所有的src内的代码都没有改变就希望能跑起来的话就需要将Sql文件导入到Apollo
