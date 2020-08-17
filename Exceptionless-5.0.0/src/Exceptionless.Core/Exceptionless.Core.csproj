@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\build\common.props" />
+  <ItemGroup>
+    <None Remove="Mail\Templates\event-notice.html" />
+    <None Remove="Mail\Templates\organization-added.html" />
+    <None Remove="Mail\Templates\organization-invited.html" />
+    <None Remove="Mail\Templates\organization-notice.html" />
+    <None Remove="Mail\Templates\organization-payment-failed.html" />
+    <None Remove="Mail\Templates\project-daily-summary.html" />
+    <None Remove="Mail\Templates\user-email-verify.html" />
+    <None Remove="Mail\Templates\user-password-reset.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Mail\Templates\event-notice.html" />
+    <EmbeddedResource Include="Mail\Templates\organization-added.html" />
+    <EmbeddedResource Include="Mail\Templates\organization-invited.html" />
+    <EmbeddedResource Include="Mail\Templates\organization-notice.html" />
+    <EmbeddedResource Include="Mail\Templates\organization-payment-failed.html" />
+    <EmbeddedResource Include="Mail\Templates\project-daily-summary.html" />
+    <EmbeddedResource Include="Mail\Templates\user-email-verify.html" />
+    <EmbeddedResource Include="Mail\Templates\user-password-reset.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="9.0.0" />
+    <PackageReference Include="AutoMapper.Collection" Version="5.0.0" />
+    <PackageReference Include="FluentValidation" Version="8.4.0" />
+    <PackageReference Include="Foundatio.Hosting" Version="8.1.2081-pre" />
+    <PackageReference Include="Foundatio.JsonNet" Version="8.1.2081-pre" />
+    <PackageReference Include="Foundatio.Repositories.Elasticsearch" Version="5.6.870" />
+    <PackageReference Include="Handlebars.Net" Version="1.10.1" />
+    <PackageReference Include="MaxMind.GeoIP2" Version="3.0.0" />
+    <PackageReference Include="McSherry.SemanticVersioning" Version="1.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
+    <PackageReference Include="Stripe.net" Version="27.24.0" />
+    <PackageReference Include="System.DirectoryServices" Version="4.5.0" />
+    <PackageReference Include="UAParser" Version="3.1.40" />
+  </ItemGroup>
+</Project>

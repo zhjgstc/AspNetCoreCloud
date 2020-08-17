@@ -22,6 +22,7 @@ namespace AuthService.Controllers
 
         public IActionResult Index()
         {
+            
             string token = Request.Headers["token"];
             
             return Content(token);

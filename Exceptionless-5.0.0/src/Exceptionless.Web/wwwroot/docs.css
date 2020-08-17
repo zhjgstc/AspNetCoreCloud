@@ -1,0 +1,15 @@
+﻿/*
+.topbar-wrapper a {
+    position: relative;
+}
+
+.topbar-wrapper a > img, span {
+    display: none;
+}
+
+.topbar-wrapper a:after {
+    padding-left: 30px;
+    content: 'Exceptionless Api';
+    background: transparent url(/favicon.ico) no-repeat left center;
+}
+*/

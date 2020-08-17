@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "ms-vscode.csharp",
+    "streetsidesoftware.code-spell-checker",
+    "tintoy.msbuild-project-tools",
+    "humao.rest-client",
+    "ms-kubernetes-tools.vscode-kubernetes-tools"
+  ]
+}

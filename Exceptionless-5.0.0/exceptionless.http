@@ -1,0 +1,53 @@
+@token = _token_
+@apiUrl = http://exceptionless.localtest.me:5000/api/v2
+@projectId = 537650f3b77efe23a47914f4
+
+### login
+
+POST {{apiUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "test@exceptionless.io",
+    "password": "tester"
+}
+
+# copy token result to @token above
+
+### get current user info
+
+GET {{apiUrl}}/users/me
+Authorization: Bearer {{token}}
+
+### get organizations
+
+GET {{apiUrl}}/organizations
+Authorization: Bearer {{token}}
+
+### get projects
+
+GET {{apiUrl}}/projects
+Authorization: Bearer {{token}}
+
+### post a sample JSON event
+
+POST {{apiUrl}}/projects/{{projectId}}/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "message": "Hello World!"
+}
+
+### post a sample text event
+
+POST {{apiUrl}}/projects/{{projectId}}/events
+Authorization: Bearer {{token}}
+Content-Type: text/plain
+
+Hello World!
+
+### get events
+
+GET {{apiUrl}}/events
+Authorization: Bearer {{token}}

@@ -1,0 +1,29 @@
+﻿---
+ConnectionStrings:
+#  Redis: server="localhost,abortConnect=false"
+#  Elasticsearch: server=http://localhost:9200;
+#  Cache: provider=redis;
+#  MessageBus: provider=redis;
+#  Queue: provider=redis;
+  Storage: provider=folder;path=..\..\..\..\..\src\Exceptionless.Web\storage
+
+# Base url for the ui used to build links in emails and other places.
+BaseURL: 'http://localhost:5000'
+
+Scope: test
+
+# Controls whether daily summary emails are sent
+EnableDailySummary: false
+
+# Runs the jobs in the current website process
+RunJobsInProcess: false
+EnableWebSockets: false
+
+Logging:
+  IncludeScopes: false
+  Debug:
+    LogLevel:
+      Default: Warning
+  Console:
+    LogLevel:
+      Default: Warning

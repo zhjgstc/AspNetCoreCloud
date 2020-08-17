@@ -1,0 +1,25 @@
+﻿---
+ConnectionStrings:
+#  Redis: server="localhost,abortConnect=false"
+#  Elasticsearch: server=http://localhost:9200
+#  Cache: provider=redis;
+#  MessageBus: provider=redis;
+#  Queue: provider=redis;
+  Storage: provider=folder;path=.\storage
+#  LDAP: ''
+
+# Base url for the ui used to build links in emails and other places.
+BaseURL: 'http://localhost:9001/#!'
+
+# Wether or not to run the jobs in process. Requires Redis to be configured when running jobs out of process.
+RunJobsInProcess: true
+
+Serilog:
+  MinimumLevel:
+    Default: Debug
+    Override:
+      Microsoft: Warning
+      System: Warning
+      Exceptionless.Web.Security.ApiKeyAuthenticationHandler: Warning
+      Foundatio.Utility.ScheduledTimer: Warning
+      Foundatio.Metrics: Warning

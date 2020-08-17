@@ -1,0 +1,121 @@
+version: '3.4'
+
+services:
+  api:
+    depends_on:
+      - elasticsearch
+      - redis
+    build:
+      context: .
+      target: api
+    image: exceptionless/api:latest
+    restart: on-failure
+    environment:
+      EX_AppMode: Production
+      EX_BaseURL: http://192.168.31.185:5100 #URL to UI
+      EX_ConnectionStrings__Cache: provider=redis
+      EX_ConnectionStrings__Elasticsearch: server=http://elasticsearch:9200
+      #EX_ConnectionStrings__Email: smtps://user:password@smtp.host.com:587
+      EX_ConnectionStrings__MessageBus: provider=redis
+      #EX_ConnectionStrings__Metrics: provider=statsd;server=statsd;
+      EX_ConnectionStrings__Queue: provider=redis
+      EX_ConnectionStrings__Redis: server=redis,abortConnect=false
+      EX_ConnectionStrings__Storage: provider=folder;path=/app/storage
+      EX_RunJobsInProcess: 'false'
+    ports:
+      - 5000:80 # This can be commented out if using reverse proxy.
+    volumes:
+      - appdata:/app/storage
+
+  jobs:
+    depends_on:
+      - api
+    build:
+      context: .
+      target: job
+    image: exceptionless/job:latest
+    restart: on-failure
+    environment:
+      EX_AppMode: Production
+      EX_BaseURL: http://192.168.31.185:5100
+      EX_ConnectionStrings__Cache: provider=redis
+      EX_ConnectionStrings__Elasticsearch: server=http://elasticsearch:9200
+      #EX_ConnectionStrings__Email: smtps://user:password@smtp.host.com:587
+      EX_ConnectionStrings__MessageBus: provider=redis
+      #EX_ConnectionStrings__Metrics: provider=statsd;server=statsd;
+      EX_ConnectionStrings__Queue: provider=redis
+      EX_ConnectionStrings__Redis: server=redis,abortConnect=false
+      EX_ConnectionStrings__Storage: provider=folder;path=/app/storage
+    volumes:
+      - appdata:/app/storage
+
+  ui:
+    image: exceptionless/ui:latest
+    environment:
+      AppMode: Development
+      EX_ApiUrl: http://192.168.31.185:5000
+      #EX_Html5Mode: 'false'
+      #EX_EnableSsl: 'false'
+      #EX_EnableAccountCreation: 'false'
+    ports:
+      - 5100:80 # This can be commented out if using reverse proxy.
+
+#  reverseproxy:
+#    depends_on:
+#      - api
+#      - ui
+#    image: valian/docker-nginx-auto-ssl
+#    restart: on-failure
+#    ports:
+#      - 80:80
+#      - 443:443
+#    volumes:
+#      - ssldata:/etc/resty-auto-ssl
+#    environment:
+#      ALLOWED_DOMAINS: '(ex-ui|ex-api).mydomainn.com'
+#      SITES: 'ex-ui.mydomainn.com=ui;ex-api.mydomainn.com=api'
+
+  elasticsearch:
+    image: edisonsaonian/exceptionless-elasticsearch:1
+    restart: on-failure
+    environment:
+      cluster.name: 'exceptionless'
+      bootstrap.memory_lock: 'true'
+      discovery.type: single-node
+      ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+      xpack.security.enabled: 'false'
+      xpack.graph.enabled: 'false'
+      xpack.watcher.enabled: 'false'
+    ports:
+      - 9200:9200
+      - 9300:9300
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  kibana:
+    depends_on:
+      - elasticsearch
+    image: exceptionless/kibana:1
+    restart: on-failure
+    environment:
+      xpack.security.enabled: 'false'
+    ports:
+      - 5601:5601
+
+  redis:
+    image: redis:alpine
+    restart: on-failure
+    ports:
+      - 6379:6379
+
+volumes:
+  esdata:
+    driver: local
+  appdata:
+    driver: local
+  ssldata:
+    driver: local

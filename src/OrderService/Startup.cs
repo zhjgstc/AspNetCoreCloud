@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrderService.Common;
 using OrderService.Extension;
+using Exceptionless;
 
 namespace OrderService
 {
@@ -43,6 +44,13 @@ namespace OrderService
 
             app.UserZipkinCore(lifetime, loggerFactory, Configuration["zipkin.address"], Configuration["AppName"] + "_" + Utils.LocalNetWorkIP());
 
+
+
+            ExceptionlessClient.Default.Configuration.ApiKey = "B306vtrOuQ7EcMaP3po8myfYtv0nMu7iHFEACL7l";
+            ExceptionlessClient.Default.Configuration.ServerUrl = "http://192.168.31.185:5000";
+            app.UseExceptionless();
+
+            
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 

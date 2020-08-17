@@ -11,7 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
+using Exceptionless;
 namespace AuthService
 {
     public class Startup
@@ -40,6 +40,10 @@ namespace AuthService
             app.RegisterConsul(lifetime, "localhost", "8500", Configuration["AppName"], "localhost", Configuration["Port"]);
             app.UserZipkinCore(lifetime, loggerFactory, "http://localhost:9411", Configuration["AppName"] + "_" + Utils.LocalNetWorkIP());
 
+            ExceptionlessClient.Default.Configuration.ApiKey = "B306vtrOuQ7EcMaP3po8myfYtv0nMu7iHFEACL7l";
+            ExceptionlessClient.Default.Configuration.ServerUrl = "http://192.168.31.185:5000";
+            app.UseExceptionless();
+            
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 

@@ -1,0 +1,19 @@
+﻿{
+  "Date": "2013-04-03T11:56:46.5505961-05:00",
+  "Message": "Exception of type 'System.Web.HttpUnhandledException' was thrown.",
+  "Type": "404",
+  "@error": {
+    "Message": "Exception of type 'System.Web.HttpUnhandledException' was thrown.",
+    "Code": "404",
+    "Type": "System.Web.HttpUnhandledException",
+    "Data": {
+      "@ext": {
+        "WebEventCode": 0,
+        "ErrorCode": -2147467259,
+        "Data": {
+          "ASPIMPERSONATING": ""
+        }
+      }
+    }
+  }
+}
