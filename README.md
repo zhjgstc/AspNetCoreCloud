@@ -94,6 +94,8 @@ AuthService内有TestController/Index使用了Polly，可以去查看。
 
 ### 通过命令行进入Exceptionless-5.0.0目录，修改docker-compose.yml内带192.168.31.185的ip，改成自己能访问得到的。如果是本地的直接改成localhost也可以。
 
+### 然后执行 docker-compose up -d 完成搭建过程会有点旧，特别是拉去mcr.microsoft的镜像会特别慢。
+
 其他具体的Exceptionless可以参考官方说明，后续我会录个视频说明一下搭建和发布。
 
 
