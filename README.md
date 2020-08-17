@@ -2,7 +2,11 @@
 
 目前还是很简陋很粗糙的，希望有做Net的朋友可以进群指导：568016706，慢慢的把这个项目维护好。
 
+![image](https://github.com/zhjgstc/AspNetCoreCloud/blob/master/%E6%9E%B6%E6%9E%84%E5%9B%BE.png)
+
 ### 视频介绍地址：https://www.ixigua.com/i6758305674041508360/
+
+### docker容器化介绍：https://www.ixigua.com/i6768731822999208462/
 
 ## 目录结构
 
@@ -85,8 +89,6 @@ AuthService内有TestController/Index使用了Polly，可以去查看。
 浏览器访问：http://localhost:10000/orderservice/home/testpost 这个是post请求的服务消费
 
 ### 最后我们浏览器访问：http://localhost:9411/ 来查看链路
-
-#### 未完待续 .后续先录个视频，目前我这个部分的内容都是开发环境的架构。如果用到生产环境应该要使用docker。录制视频后我就去把各类服务打包成为docker镜像。
 
 
 
