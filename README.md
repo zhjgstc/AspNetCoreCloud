@@ -96,7 +96,7 @@ AuthService内有TestController/Index使用了Polly，可以去查看。
 
 ### 然后执行 docker-compose up -d 完成搭建过程会有点久，特别是拉去mcr.microsoft的镜像会特别慢。
 
-其他具体的Exceptionless可以参考官方说明 https://github.com/exceptionless/Exceptionless/wiki ，后续我会录个视频说明一下搭建和发布。
+其他具体的Exceptionless可以参考官方说明 https://github.com/exceptionless/Exceptionless/wiki ，页面头部有个视频连接可以稍微看看。
 
 
 
