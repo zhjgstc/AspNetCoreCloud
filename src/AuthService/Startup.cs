@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Exceptionless;
+using zipkin4net.Transport.Http;
 namespace AuthService
 {
     public class Startup
@@ -26,6 +27,7 @@ namespace AuthService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddHttpClient("Tracer").AddHttpMessageHandler(provider => TracingHandler.WithoutInnerHandler(provider.GetService<IConfiguration>()["AppName"]));
             services.AddControllersWithViews();
         }
 
@@ -43,7 +45,8 @@ namespace AuthService
             ExceptionlessClient.Default.Configuration.ApiKey = "B306vtrOuQ7EcMaP3po8myfYtv0nMu7iHFEACL7l";
             ExceptionlessClient.Default.Configuration.ServerUrl = "http://192.168.31.185:5000";
             app.UseExceptionless();
-            
+
+
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 

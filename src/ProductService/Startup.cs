@@ -12,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ProductService.Extension;
 using Exceptionless;
+using zipkin4net.Transport.Http;
 
 namespace ProductService
 {
@@ -27,6 +28,7 @@ namespace ProductService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddHttpClient("Tracer").AddHttpMessageHandler(provider => TracingHandler.WithoutInnerHandler(provider.GetService<IConfiguration>()["AppName"]));
             services.AddControllersWithViews();
         }
 

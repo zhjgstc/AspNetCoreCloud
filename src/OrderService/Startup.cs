@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Common;
 using OrderService.Extension;
 using Exceptionless;
+using zipkin4net.Transport.Http;
 
 namespace OrderService
 {
@@ -27,6 +28,7 @@ namespace OrderService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+                        services.AddHttpClient("Tracer").AddHttpMessageHandler(provider => TracingHandler.WithoutInnerHandler(provider.GetService<IConfiguration>()["AppName"]));
             services.AddControllersWithViews();
         }
 
