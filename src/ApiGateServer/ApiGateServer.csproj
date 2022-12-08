@@ -8,7 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Consul" Version="0.7.2.6" />
     <PackageReference Include="JWT" Version="5.3.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="Ocelot" Version="13.9.0-alpha0115" />
     <PackageReference Include="Ocelot.Provider.Consul" Version="13.9.0-alpha0115" />
     <PackageReference Include="Com.Ctrip.Framework.Apollo.Configuration" Version="2.1.0" />
