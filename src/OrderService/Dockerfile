@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
-COPY bin/Debug/netcoreapp3.0/linux-x64/* ./
+COPY bin/Release/net10.0/linux-x64/publish/ ./
 ENTRYPOINT ["dotnet", "OrderService.dll"]

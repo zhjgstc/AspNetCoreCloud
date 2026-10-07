@@ -1,42 +1,25 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Com.Ctrip.Framework.Apollo;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+var builder = WebApplication.CreateBuilder(args);
 
-namespace OrderService
+builder.Services.AddControllers();
+builder.Services.AddHealthChecks();
+
+// 服务间调用：基址来自配置 Services:{Name}。
+// M2 引入 IServiceDiscovery 后，这里会改成从注册中心解析出的健康实例地址，
+// 控制器代码不需要改动 —— 控制器只认 "auth" / "product" 这两个逻辑名。
+builder.Services.AddHttpClient("auth", c =>
+    c.BaseAddress = new Uri(builder.Configuration["Services:Auth"] ?? "http://localhost:10100"));
+
+builder.Services.AddHttpClient("product", c =>
+    c.BaseAddress = new Uri(builder.Configuration["Services:Product"] ?? "http://localhost:10300"));
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
 {
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args)
-        {
-            var configuration = new ConfigurationBuilder().SetBasePath(Environment.CurrentDirectory)
-                                           .AddJsonFile("appsettings.json")
-                                           .Build();
-            var url = $"http://*:" + configuration["Port"];
-            return Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.ConfigureAppConfiguration(builder =>
-                    {
-                        builder //普通方式，一般配置在appsettings.json中
-                        .AddApollo(builder.Build().GetSection("apollo"))
-                        .AddDefault()
-                        .AddNamespace("application");
-                    }
-                    ).UseUrls(url).UseStartup<Startup>();
-                });
-        }
-       
-            
-    }
+    app.UseDeveloperExceptionPage();
 }
+
+app.MapHealthChecks("/health");
+app.MapControllers();
+
+app.Run();
