@@ -35,16 +35,17 @@ public static class NacosServiceCollectionExtensions
                 $"缺少服务名配置：请设置 {sectionName}:ServiceName 或 Service:Name。");
         }
 
-        // 端口没显式配置时，从 Kestrel 的 URLs 推导 —— 避免配置与真实监听漂移
-        if (options.Port <= 0)
-        {
-            options.Port = ListeningPortResolver.FromUrls(configuration["Urls"]);
-        }
+        // 端口推导刻意不在这里做：配置里的 "Urls" 只是 Kestrel 的默认值来源之一，
+        // 命令行 --urls、ASPNETCORE_URLS 都可能覆盖它，提前取值会与实际监听漂移
+        // （实测过：第二实例用 --urls 10301 启动，却注册成了配置里的 10300，
+        //   与第一个实例同 ip:port，被注册中心当成同一个实例）。
+        // 真正的端口在 NacosRegistrationHostedService 里从 Kestrel 实际监听地址推导，
+        // Nacos:Port 仅在需要覆盖时使用。
 
         if (options.ServerAddresses.Count == 0)
         {
-            throw new InvalidOperationException(
-                $"缺少配置 {sectionName}:ServerAddresses，服务不知道注册中心在哪。");
+            // 没配就退回本机默认地址：demo 能直接跑起来，但不该在生产里靠这个兜底
+            options.ServerAddresses.Add("http://localhost:8848");
         }
 
         services.AddSingleton(options);

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>AspNetCoreCloud.Gateway</RootNamespace>
+    <AssemblyName>AspNetCoreCloud.Gateway</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Yarp.ReverseProxy" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 网关复用同一套服务发现抽象：非 K8s 走 Nacos，将来 K8s 只需换实现 -->
+    <ProjectReference Include="..\BuildingBlocks\ServiceDiscovery.Abstractions\AspNetCoreCloud.ServiceDiscovery.Abstractions.csproj" />
+    <ProjectReference Include="..\BuildingBlocks\ServiceDiscovery.Nacos\AspNetCoreCloud.ServiceDiscovery.Nacos.csproj" />
+  </ItemGroup>
+
+</Project>

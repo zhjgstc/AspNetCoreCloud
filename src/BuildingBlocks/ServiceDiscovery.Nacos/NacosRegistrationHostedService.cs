@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Nacos.V2;
@@ -20,6 +21,7 @@ public sealed class NacosRegistrationHostedService : IHostedService
     private readonly INacosNamingService _naming;
     private readonly NacosDiscoveryOptions _options;
     private readonly IServer? _server;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<NacosRegistrationHostedService> _logger;
 
     private ServiceRegistration? _registration;
@@ -29,12 +31,14 @@ public sealed class NacosRegistrationHostedService : IHostedService
         INacosNamingService naming,
         NacosDiscoveryOptions options,
         ILogger<NacosRegistrationHostedService> logger,
+        IConfiguration configuration,
         IServer? server = null)
     {
         _registry = registry;
         _naming = naming;
         _options = options;
         _logger = logger;
+        _configuration = configuration;
         _server = server;
     }
 
@@ -59,6 +63,9 @@ public sealed class NacosRegistrationHostedService : IHostedService
         }
 
         var ip = LocalIpResolver.Resolve(_options.PreferredNetworks, _options.Ip);
+        // 端口优先级：显式配置 Nacos:Port > Kestrel 实际监听地址。
+        // 顺序不能反 —— 命令行 --urls / ASPNETCORE_URLS 都能改真实监听端口，
+        // 而配置里的 Urls 未必是最终值，拿配置当首选会注册到错误端口。
         var port = _options.Port > 0 ? _options.Port : ResolveListeningPort();
 
         _registration = new ServiceRegistration(
@@ -114,6 +121,13 @@ public sealed class NacosRegistrationHostedService : IHostedService
             addresses is null ? "<IServer 不可用>" : string.Join(",", addresses));
 
         var port = ListeningPortResolver.FromAddresses(addresses);
+
+        // 回退：Kestrel 地址特征还没就绪时（取决于托管服务的启动顺序），
+        // 退到配置里的 Urls —— 至少不会注册成一个没人监听的 80 端口
+        if (port <= 0)
+        {
+            port = ListeningPortResolver.FromUrls(_configuration["Urls"]);
+        }
 
         if (port <= 0)
         {

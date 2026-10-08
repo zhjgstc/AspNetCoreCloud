@@ -33,9 +33,16 @@ public sealed class NacosServiceDiscovery : IServiceDiscovery, IEventListener
 
     public async Task<IReadOnlyList<ServiceEndpoint>> ResolveAsync(string serviceName, CancellationToken ct = default)
     {
-        EnsureSubscribed(serviceName);
+        var subscribe = _options.UseSubscribeCache;
 
-        var instances = await _naming.SelectInstances(serviceName, _options.GroupName, healthy: true, subscribe: true);
+        if (subscribe)
+        {
+            EnsureSubscribed(serviceName);
+        }
+
+        // subscribe=true  → 走订阅 + 本地缓存，请求量小，但依赖服务端 UDP 推送更新
+        // subscribe=false → 每次直查注册中心，结果一定最新（网关必须用这个）
+        var instances = await _naming.SelectInstances(serviceName, _options.GroupName, healthy: true, subscribe);
 
         var endpoints = instances
             .Where(i => i.Enabled)

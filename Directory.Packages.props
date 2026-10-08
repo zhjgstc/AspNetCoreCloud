@@ -9,7 +9,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 服务注册/发现：全仓库只有 ServiceDiscovery.Nacos 引用它 -->
     <PackageVersion Include="nacos-sdk-csharp" Version="1.3.10" />
+
+    <!-- 反向代理网关 -->
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+
+    <!-- JWT 鉴权：版本跟随 ASP.NET Core 运行时（10.0.x） -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
   </ItemGroup>
 
 </Project>

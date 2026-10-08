@@ -1,5 +1,7 @@
 <Solution>
-  <Folder Name="/src/" />
+  <Folder Name="/src/">
+    <Project Path="src/Gateway/AspNetCoreCloud.Gateway.csproj" />
+  </Folder>
   <Folder Name="/src/BuildingBlocks/">
     <Project Path="src/BuildingBlocks/ServiceDiscovery.Abstractions/AspNetCoreCloud.ServiceDiscovery.Abstractions.csproj" />
     <Project Path="src/BuildingBlocks/ServiceDiscovery.Nacos/AspNetCoreCloud.ServiceDiscovery.Nacos.csproj" />

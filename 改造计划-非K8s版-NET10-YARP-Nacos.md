@@ -409,6 +409,48 @@ new ClusterConfig {
 3. `--scale product=3` 后**不用重启网关**，请求轮询到 3 个实例（日志里能看到不同实例 ID）
 4. 停掉一个实例 → 网关 5 秒内不再转发给它（YARP 主动健康检查生效）
 
+#### M3 实测记录（2026-10-08，连远程 Nacos 45.113.3.57:8848 真跑）
+
+**验收结果**
+
+| 项 | 结果 |
+|---|---|
+| `/api/product/test` 无 token | **401** |
+| 带 Bearer token | **200**（返回 `123`） |
+| 匿名白名单 `/api/auth/**` | **200**（无需 token） |
+| 跨服务链路 order → auth/product（经网关） | **200** |
+| 第二实例上线 → 网关感知 | **5 秒内**，revision 变化 |
+| 连调 8 次负载均衡 | `10300 10301 10300 10301 10300 10301 10300 10301`（RoundRobin 4:4） |
+| kill 实例 → 摘除 | **10 秒内**，之后 6 次全落存活实例 |
+| 限流（200/秒·IP） | 250 次突发 → 199×200 + **51×429**，窗口重置后恢复 200 |
+| 健康端点 | `/health`、`/health/live`、`/health/ready` 全 200 |
+
+**实测发现并已修正的 3 个坑**
+
+- **D4｜SDK 订阅缓存跨公网不更新（最隐蔽）**
+  `SelectInstances(..., subscribe: true)` 走本地缓存，缓存靠服务端 **UDP 推送**刷新。
+  跨公网/NAT 时推送到不了客户端 —— 实测注册中心上明明有 2 个实例，网关 **30 秒**内始终只看到 1 个。
+  → 新增 `Nacos:UseSubscribeCache`（默认 `true`）；**网关必须设 `false`**，
+  每次直查注册中心。网关是路由决策方，宁可多几个请求也要拿最新实例。
+
+- **D5｜注册端口取了配置值而不是真实监听端口**
+  原先在 `AddNacosServiceDiscovery` 里就用 `configuration["Urls"]` 预填 `options.Port`，
+  于是 `options.Port > 0` 恒成立，Kestrel 真实监听地址永远不会被采用。
+  后果：第二实例 `--urls 10301` 启动，却注册成配置里的 **10300**，
+  与第一个实例同 ip:port，被注册中心当成同一个实例 → 永远只有 1 个实例。
+  → 去掉预填；端口优先级改为「显式 `Nacos:Port` > Kestrel 实际监听地址 > 配置 `Urls` > 80」。
+
+- **D6｜配置绑定器对集合属性是「追加」不是「替换」**
+  两个实例：`GatewayOptions.Services` 默认 3 项 + 配置 3 项 = **6 项**（会产生重复路由）；
+  `NacosDiscoveryOptions.ServerAddresses` 默认 `localhost:8848` + 配置的真实地址 = **2 项**
+  （SDK 会一直去连一个不存在的 localhost:8848）。
+  → **凡是集合类型的配置属性，默认值一律留空**，缺省值在代码里兜底。
+
+**本次未做（顺延）**
+- 熔断/重试：YARP 只能通过自定义 `IForwarderHttpClientFactory` 插入 `DelegatingHandler`，
+  `ConfigureHttpClient` 只能改 `HttpClientHandler`。留到弹性专项做。
+- OTel 埋点：属 M4。
+
 ---
 
 ### M4 — 可观测性（1 天）
