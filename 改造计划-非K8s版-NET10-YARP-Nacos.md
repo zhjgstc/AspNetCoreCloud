@@ -304,6 +304,9 @@ builder.Configuration.AddNacosV2Configuration(
 
 ### M2 — BuildingBlocks：注册发现抽象 + Nacos 实现（2 天）⭐ 核心
 
+> **状态：已完成（2026-10-07）。** 本次只做非 K8s 路径，`ServiceDiscovery.K8s` / `K8sProxyConfigProvider`
+> / `tests/ArchitectureTests` 按约定推迟到非 K8s 全部完成后再补。
+
 **目标**：服务能自动注册到 Nacos、能被发现、停机自动摘除。
 
 | 动作 | 文件 |
@@ -340,6 +343,33 @@ builder.Configuration.AddNacosV2Configuration(
 2. `docker compose up -d --scale product=3` → Nacos 里 product 有 3 个健康实例
 3. `docker compose stop product-1` → 5 秒内实例消失
 4. **断网测试**：kill Nacos 容器，服务仍能靠本地缓存调用（Nacos 客户端有本地缓存）
+
+#### M2 实测记录：与计划的 3 处偏差（2026-10-07）
+
+联网实测（本地 3 个 .NET 10 服务 → 远程 Nacos 2.5.4）后发现 3 个假设不成立，已修正：
+
+| # | 计划里的假设 | 实测结论 | 现在的做法 |
+|---|---|---|---|
+| **D1** | 配 `Nacos:PreferredNetworks` 就能选对网卡 | **这个配置项根本不存在**。`NacosSdkOptions` 里没有它 —— 那是 Java / Spring Cloud Alibaba 客户端的概念 | 自己写 `LocalIpResolver`：按前缀列表（默认 `192.168.` / `10.` / `172.`）从网卡里挑，支持 `Nacos:Ip` 显式指定 |
+| **D2** | `NamingUseRpc: true`（Nacos 2.x 推荐 gRPC） | **握手失败**：`Request nacos server failed: -401, Client not connected, current status: STARTING`。服务端 9848/9849 都在监听、无拒绝记录，判定为 SDK 1.3.10 与 Nacos 2.5.4 的 gRPC 不兼容 | `NamingUseRpc` 默认 **false**（HTTP 模式）。门禁验证四步全通 |
+| **D3** | 端口写在 `Nacos:Port` | 与 `Urls` 两处维护同一个数字必然漂移 —— 首轮实测直接注册成了 `:80` | 从 Kestrel 的 `Urls` 配置推导（`ListeningPortResolver`），`Nacos:Port` 只作显式覆盖 |
+
+**已知限制（不影响功能）**：`nacos-sdk-csharp` 的 `PushReceiver` 在固定 UDP 端口监听，
+同一台机器跑多个进程时，后启动的会报 `Address already in use`。
+只影响 UDP 推送（变更通知），HTTP 轮询照常工作，实例上下线仍能感知。
+真实部署（一容器一实例 / 一机一实例）不会遇到。
+
+**M2 验收实测结果**：
+
+```
+服务注册     auth/order/product 三个服务均出现在 Nacos，IP 与端口正确（10100/10200/10300）
+跨服务调用   order -> auth [200]，order -> product [200]（全程经 IServiceDiscovery 解析）
+多实例       再起一个 product 实例 → Nacos 出现 2 个健康实例
+客户端 LB    order 连调 product 6 次 → 10300 命中 3 次、10301 命中 3 次
+实例摘除     kill 掉 10301 → 8 秒内从 Nacos 消失，后续 6 次调用全部落到 10300
+健康端点     /health、/health/live、/health/ready 三态均 200
+编译         dotnet build 0 警告 0 错误
+```
 
 ---
 

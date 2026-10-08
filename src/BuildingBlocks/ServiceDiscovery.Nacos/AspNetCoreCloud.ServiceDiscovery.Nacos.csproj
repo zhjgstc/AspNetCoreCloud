@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>AspNetCoreCloud.ServiceDiscovery.Nacos</RootNamespace>
+    <AssemblyName>AspNetCoreCloud.ServiceDiscovery.Nacos</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 全仓库唯一引用 nacos-sdk-csharp 的地方 -->
+    <PackageReference Include="nacos-sdk-csharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ServiceDiscovery.Abstractions\AspNetCoreCloud.ServiceDiscovery.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

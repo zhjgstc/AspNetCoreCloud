@@ -1,7 +1,12 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/AuthService/AuthService.csproj" />
-    <Project Path="src/OrderService/OrderService.csproj" />
-    <Project Path="src/ProductService/ProductService.csproj" />
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/ServiceDiscovery.Abstractions/AspNetCoreCloud.ServiceDiscovery.Abstractions.csproj" />
+    <Project Path="src/BuildingBlocks/ServiceDiscovery.Nacos/AspNetCoreCloud.ServiceDiscovery.Nacos.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/">
+    <Project Path="src/Services/AuthService/AuthService.csproj" />
+    <Project Path="src/Services/OrderService/OrderService.csproj" />
+    <Project Path="src/Services/ProductService/ProductService.csproj" />
   </Folder>
 </Solution>

@@ -33,6 +33,29 @@ public class OrdersController : ControllerBase
         return Content($"order -> auth: {auth}{Environment.NewLine}order -> product: {product}");
     }
 
+    /// <summary>
+    /// 客户端负载均衡演示：连续调用 product 若干次，统计请求落在哪些实例上。
+    /// 因为 product 起了多个实例，命中分布应该分散 —— 这是「非 K8s 没有 kube-proxy，
+    /// 负载均衡由调用方自己做」的直接证据。
+    /// </summary>
+    [HttpGet("lb")]
+    public async Task<IActionResult> LoadBalance(CancellationToken ct)
+    {
+        var hits = new Dictionary<string, int>();
+
+        for (var i = 0; i < 6; i++)
+        {
+            var body = await CallGetAsync("product", "api/product/instance", ct);
+            hits[body] = hits.GetValueOrDefault(body) + 1;
+        }
+
+        var lines = hits
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => $"  实例 {kv.Key} 命中 {kv.Value} 次");
+
+        return Content($"product 共 {hits.Count} 个实例：{Environment.NewLine}{string.Join(Environment.NewLine, lines)}");
+    }
+
     /// <summary>跨服务 POST 演示：order -> product/api/product/new</summary>
     [HttpPost("create")]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)

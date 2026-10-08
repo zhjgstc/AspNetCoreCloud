@@ -1,0 +1,15 @@
+<Project>
+
+  <!--
+    中央包管理（CPM）：所有 PackageReference 不再写 Version，版本号只在这里维护一处。
+    新增依赖时：先在这里加 <PackageVersion>，再到具体工程写 <PackageReference Include="..." />。
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="nacos-sdk-csharp" Version="1.3.10" />
+  </ItemGroup>
+
+</Project>

@@ -6,4 +6,8 @@
     <AssemblyName>AuthService</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\ServiceDiscovery.Nacos\AspNetCoreCloud.ServiceDiscovery.Nacos.csproj" />
+  </ItemGroup>
+
 </Project>
