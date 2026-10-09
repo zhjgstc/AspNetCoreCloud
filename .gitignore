@@ -1,6 +1,6 @@
 **/.vs
 **/bin
 **/obj
-apollo-quick-start-1.5.0/*
-!apollo-quick-start-1.5.0/sql/
-consul-1.6.0
+
+# 本地环境变量（含真实地址/凭据，绝不入库）
+deploy/compose/.env

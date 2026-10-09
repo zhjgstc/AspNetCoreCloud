@@ -409,7 +409,7 @@ new ClusterConfig {
 3. `--scale product=3` 后**不用重启网关**，请求轮询到 3 个实例（日志里能看到不同实例 ID）
 4. 停掉一个实例 → 网关 5 秒内不再转发给它（YARP 主动健康检查生效）
 
-#### M3 实测记录（2026-10-08，连远程 Nacos 45.113.3.57:8848 真跑）
+#### M3 实测记录（2026-10-08，连远程 Nacos <nacos-host>:8848 真跑）
 
 **验收结果**
 
@@ -467,7 +467,7 @@ new ClusterConfig {
 
 **验收**：Aspire Dashboard 里能看到一条 `gateway → product` 的完整链路（含 span 层级），错误请求带 traceId。
 
-### M4 实测记录（2026-10-09｜Nacos 45.113.3.57 + Aspire Dashboard 13.6.0）
+### M4 实测记录（2026-10-09｜Nacos <server-host> + Aspire Dashboard 13.6.0）
 
 | 项 | 结果 |
 |---|---|
