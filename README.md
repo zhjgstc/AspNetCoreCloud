@@ -5,8 +5,9 @@
 
 ```bash
 docker compose -f deploy/compose/docker-compose.yml up -d --build
-# 打开 http://localhost:10000/gateway  看网关路由与实时实例
-# 打开 http://localhost:18888         看链路 / 指标 / 日志
+# 打开 http://localhost:10000/gateway   看网关路由与实时实例
+# 打开 http://localhost:18848/nacos     看注册中心（默认免登录）
+# 打开 http://localhost:18888           看链路 / 指标 / 日志（默认免登录）
 ```
 
 ---
@@ -172,6 +173,56 @@ dotnet run --project src/Gateway                 --urls http://0.0.0.0:10000
 | `GET /api/order/lb` | Order 连续调 Product 若干次，看实例分发 |
 | `GET /api/product/instance` | 返回命中的实例（hostname + ip:port） |
 | `GET /api/product/test` | 受保护路由，无 token 返回 401 |
+
+---
+
+## 控制台与账号密码
+
+**这套编排里只有两个带 Web 后台的组件，demo 默认都是免登录的**，一条 `up` 之后直接点开就能用：
+
+| 后台 | 地址 | 默认账号 | 默认密码 | 由哪个变量控制 |
+|---|---|---|---|---|
+| **Nacos 控制台** | http://localhost:18848/nacos | **无需登录**（鉴权关闭） | 无 | `NACOS_AUTH_ENABLE=false` |
+| **Aspire Dashboard** | http://localhost:18888 | **无需登录**（匿名访问） | 无 | `DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true` |
+| 网关 / Auth / Order / Product | — | 无后台，只有 HTTP 端点 | — | — |
+
+### Nacos
+
+- 默认 `NACOS_AUTH_ENABLE=false`，控制台**打开即可用，不弹登录框**。
+- 想开鉴权：把 `deploy/compose/.env` 里的 `NACOS_AUTH_ENABLE` 改成 `true`，然后：
+  1. Nacos **2.4 起不再内置默认密码**。首次访问控制台会引导你设置管理员密码；也可以调
+     `POST http://localhost:18848/nacos/v1/auth/users/admin`（参数 `username`、`password`）预置。
+     用户名沿用 `nacos`，密码就是你自己设的那个。
+  2. 还要补 `NACOS_AUTH_TOKEN`（Base64，原始串 ≥ 32 字符）、`NACOS_AUTH_IDENTITY_KEY`、
+     `NACOS_AUTH_IDENTITY_VALUE`，否则服务端起不来。
+  3. 每个业务服务都要带上注册中心凭据，否则心跳/注册会 403 `user not found!`：
+
+     ```yaml
+     environment:
+       Nacos__UserName: nacos
+       Nacos__Password: <你设置的密码>
+     ```
+
+     本机 `dotnet run` 时用 `export Nacos__UserName=nacos` / `Nacos__Password=...` 即可。
+
+### Aspire Dashboard
+
+- 默认匿名访问，打开 `http://localhost:18888` 直接进。
+- 想加登录：删掉 compose 里的 `DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true`。
+  启动后日志会打印一次性登录地址，这样取：
+
+  ```bash
+  docker logs aspnetcorecloud-aspire-dashboard-1 2>&1 | grep -i "login"
+  # 形如 http://localhost:18888/login?t=<token>
+  ```
+
+  这个 token **每次重启容器都会变**，不是固定密码。
+
+### 网关的"账号"说明
+
+网关本身没有后台登录页。受保护的业务路由需要 `Authorization: Bearer <token>`，
+demo 阶段可以用 `GET /gateway/token` 现取一个（签发用的 key 写在
+`src/Gateway/appsettings.json` 的 `Jwt:Key`，**生产必须换成密钥管理并关掉这个端点**）。
 
 ---
 
