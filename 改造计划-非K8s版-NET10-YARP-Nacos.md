@@ -467,6 +467,29 @@ new ClusterConfig {
 
 **验收**：Aspire Dashboard 里能看到一条 `gateway → product` 的完整链路（含 span 层级），错误请求带 traceId。
 
+### M4 实测记录（2026-10-09｜Nacos 45.113.3.57 + Aspire Dashboard 13.6.0）
+
+| 项 | 结果 |
+|---|---|
+| 编译 | `dotnet build` **0 警告 0 错误** |
+| 埋点 | 网关与 product 均上报 `service.name`、`telemetry.sdk.version=1.19.1`，日志自动带 `SpanId` / `TraceId` |
+| 链路传播 | 经网关调用 product，响应头出现**两个完全相同的 `X-Trace-Id`**（网关一个、product 一个）；product 侧上报的 TraceId 与网关一致 → `traceparent` 传播成功 |
+| 导出 | OTLP gRPC 打到 Dashboard `:18889`，服务日志无任何导出失败 |
+| 噪声过滤 | 入站 `/health*`、出站 `/nacos/` 不产生 span |
+| 资源 | Dashboard 容器常驻约 **76 MB** 内存（限 320 MB），比想象中轻 |
+
+**本次踩坑（记下来，省得重踩）**
+
+- **D7｜Dashboard 13.6 的 OTLP 端口是分开的**：`:18889` 只有 gRPC，`:18890` 才是 HTTP/protobuf，不是「一个端口两种协议」。默认 `grpc` 即可，别手动改成 http 却还打 18889。
+- **D8｜Nacos 开了鉴权必须注入用户名密码**：否则注册与心跳全部 403 `user not found!`。用 `Nacos__UserName` / `Nacos__Password` 环境变量注入（缺密码时启动日志会打 warn 提示）。
+- **D9｜OTel 1.19 的 HttpClient 埋点选项改名**：`Filter` → `FilterHttpRequestMessage`（`Func<HttpRequestMessage, bool>`）。凭记忆写会编译不过，先反射确认再写。
+
+**交付物**
+
+- `src/BuildingBlocks/Observability/`：`ObservabilityOptions` + `AddAspNetCoreCloudObservability()` + `UseTraceIdResponseHeader()`
+- 四个工程（gateway / auth / order / product）各调一次，业务代码零 OTel 依赖
+- 导出地址只由 `OTEL_EXPORTER_OTLP_ENDPOINT` 决定；不配则只埋点不导出，本地不启收集端也不会刷错误日志
+
 ---
 
 ### M5 — 容器化与编排（1.5 天）
@@ -487,6 +510,35 @@ new ClusterConfig {
 | **一键分发约束** | compose 里**只写 `image:` 不写 `build:`**、变量全给默认值、不挂本地相对路径——否则远程引用失效。详见 `一键启动分发方案.md` |
 
 **验收**：`docker compose up -d` → 全部容器 healthy → `curl` 通 → `docker compose down` 后 Nacos 里实例已注销（无残留脏实例）。
+
+### M5 实测结果（2026-10-09，远程服务器 Docker 29 / Compose v5.1.1 真机跑通）
+
+| 交付物 | 说明 |
+|---|---|
+| 四个 `Dockerfile` | 多阶段（SDK 镜像还原+发布 → aspnet 运行时），非 root 运行，构建上下文=仓库根 |
+| `deploy/compose/docker-compose.yml` | nacos + gateway + auth + order + product + aspire-dashboard |
+| `deploy/compose/docker-compose.debug.yml` | 可选 override，把业务服务端口暴露到宿主便于直连调试 |
+| `deploy/compose/.env.example` | 端口、版本、内存上限全部可覆盖 |
+| `scripts/{start,stop,status,logs,reset}.sh` | 一键启停与状态查看 |
+| `.dockerignore` | 排除 `.git` 与历史遗留大目录，否则构建上下文巨大 |
+
+**实测数据**：
+
+- 全容器 healthy（nacos 冷启动约 60 秒，靠 `depends_on: service_healthy` 挡住抢跑）
+- `--scale product=3`：网关 9 次调用严格 **3:3:3** 轮询；`order → product` 客户端负载均衡 6 次分布到 3 个实例
+- 停掉一个 product 容器：**20 秒内** Nacos 实例降为 2、网关路由同步更新、流量不再打到已停实例（`stop_grace_period: 30s` 保证来得及注销，不会留脏实例）
+- 无 token → 401，有 token → 200
+- 镜像体积：业务服务约 349 MB（含 curl，供健康检查用）
+
+**M5 新踩的坑（D10–D13）**：
+
+| # | 坑 | 对策 |
+|---|---|---|
+| D10 | `.NET` 官方镜像已内置 `app` 用户（uid 1654），Dockerfile 里再 `useradd --uid 1654` 会报 `UID is not unique` 构建失败 | 直接 `USER 1654:1654` |
+| D11 | 给业务服务写固定 `ports:` 映射后，`--scale product=3` 会因宿主端口冲突起不来 | 业务服务**不映射**宿主端口，唯一入口是网关 10000；要直连调试就加 `-f docker-compose.debug.yml` |
+| D12 | `product` 的 `/api/product/instance` 原先只返回端口，scale 出来的实例端口都一样，看不出负载均衡到底生效没有 | 改成返回 `hostname|ip:port`（容器 hostname 即容器短 ID，天然唯一） |
+| D13 | OTLP 走 gRPC（18889）时，Aspire Dashboard 侧刷 `Error reading message / client reset the request stream`，数据进不去 | 改走 **HTTP/protobuf（18890）**，实测稳定、零错误 |
+| D14 | OTLP 导出器内置的 HttpClient 默认 Information 级，每批导出都打日志，几分钟刷满 | Observability 构建块里把 `System.Net.Http.HttpClient` 压到 Warning |
 
 ---
 
@@ -572,7 +624,7 @@ new ClusterConfig {
 - [ ] 受保护路由无 token → 401；有 token → 200
 - [ ] `docker compose up -d --scale product=3` 后**不重启网关**，流量轮询到 3 个实例
 - [ ] 停掉其中一个实例，5 秒内不再有流量打到它
-- [ ] Aspire Dashboard 能看到 `gateway → product` 完整链路
+- [x] Aspire Dashboard 能看到 `gateway → product` 完整链路（**本机实测通过**，compose 环境随 M5 复核）
 - [ ] `docker compose down` 后 Nacos 无残留实例
 - [ ] 业务代码中 grep 不到 `Nacos.` / `Consul.` / `Ocelot.` 命名空间（只出现在 BuildingBlocks）
 - [ ] README 开头 30 秒内能看懂架构并跑起来

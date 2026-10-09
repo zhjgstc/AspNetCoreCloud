@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 可观测：统一 OTel 注册，业务工程本身不直接依赖任何 OTel 包 -->
+    <ProjectReference Include="..\..\BuildingBlocks\Observability\AspNetCoreCloud.Observability.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\ServiceDiscovery.Nacos\AspNetCoreCloud.ServiceDiscovery.Nacos.csproj" />
   </ItemGroup>
 

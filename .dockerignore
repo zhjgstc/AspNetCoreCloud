@@ -1,0 +1,23 @@
+# 镜像构建上下文是仓库根目录，下面这些与运行时无关且体积大，全部排除。
+# 不排除的话 .git / 历史遗留目录会被打进构建上下文，restore 与 COPY 都会变慢。
+
+.git
+.github
+.idea
+.vs
+.vscode
+.DS_Store
+
+**/bin/
+**/obj/
+**/node_modules/
+
+# 历史遗留（Apollo 快速启动包 / Exceptionless 源码），仅作资料保留，不参与构建
+Exceptionless-5.0.0/
+apollo-quick-start-1.5.0/
+
+# 文档与部署物料
+*.md
+架构图.png
+deploy/
+scripts/

@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AspNetCoreCloud.Gateway;
+using AspNetCoreCloud.Observability;
 using AspNetCoreCloud.ServiceDiscovery;
 using AspNetCoreCloud.ServiceDiscovery.Nacos;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,6 +13,9 @@ using System.Threading.RateLimiting;
 using Yarp.ReverseProxy.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 可观测：网关的入站 span 与转发到下游的出站 span 会自动串成一条完整链路
+builder.AddAspNetCoreCloudObservability("gateway");
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var signingKey = jwtSection["Key"];
@@ -108,6 +112,7 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+app.UseTraceIdResponseHeader();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

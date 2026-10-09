@@ -14,12 +14,24 @@ public class ProductsController : ControllerBase
     public IActionResult Test() => Content("123");
 
     /// <summary>
-    /// 返回本实例实际监听的端口 —— 用于验证请求被分发到了哪个实例。
-    /// 刻意只用 ASP.NET 原生 API（Connection.LocalPort），不依赖任何注册中心，
-    /// 这样业务代码永远不知道自己跑在 Nacos 还是 K8s 上。
+    /// 返回「我是哪个实例」—— 用来验证请求被分发到了哪个实例。
+    ///
+    /// 格式：<c>hostname|ip:port</c>，例如 <c>3f9a1c2e|172.19.0.4:10300</c>。
+    /// 为什么带 hostname：容器里 hostname 就是容器短 ID，多实例时各不相同；
+    /// 而端口在 scale 出来的一批实例里是一样的（都是 10300），只看端口分不出实例。
+    ///
+    /// 刻意只用 ASP.NET 原生 API（Connection.LocalIpAddress / LocalPort），
+    /// 不依赖任何注册中心 —— 业务代码始终不知道自己跑在 Nacos 还是 K8s 上。
     /// </summary>
     [HttpGet("instance")]
-    public IActionResult Instance() => Content($"{HttpContext.Connection.LocalPort}");
+    public IActionResult Instance()
+    {
+        var host = Environment.MachineName;
+        var ip = HttpContext.Connection.LocalIpAddress?.ToString() ?? "unknown";
+        var port = HttpContext.Connection.LocalPort;
+
+        return Content($"{host}|{ip}:{port}");
+    }
 
     [HttpPost("add")]
     public IActionResult Add([FromBody] JsonElement data)

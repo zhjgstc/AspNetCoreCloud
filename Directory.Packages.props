@@ -17,6 +17,17 @@
 
     <!-- JWT 鉴权：版本跟随 ASP.NET Core 运行时（10.0.x） -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+
+    <!--
+      可观测：OpenTelemetry .NET（当前最新稳定 1.19.x）。
+      只有 Observability 工程引用它们，业务服务不直接依赖 OTel，
+      换后端（Jaeger / Tempo / 云厂商）只改 OTEL_EXPORTER_OTLP_ENDPOINT，不动代码。
+    -->
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
   </ItemGroup>
 
 </Project>

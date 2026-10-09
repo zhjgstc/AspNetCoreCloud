@@ -1,103 +1,237 @@
-# AspNetCoreCloud 
+# AspNetCoreCloud
 
-![image](https://github.com/zhjgstc/AspNetCoreCloud/blob/master/%E6%9E%B6%E6%9E%84%E5%9B%BE.png)
+> 一个**面向 2026 的 .NET 微服务参考架构**：.NET 10 + YARP 网关 + Nacos 服务发现 + OpenTelemetry 可观测。
+> 目标不是"能跑"，而是**让人 clone 下来一条命令就能看到完整调用链**。
 
-### 视频介绍地址：https://www.ixigua.com/i6758305674041508360/
+```bash
+docker compose -f deploy/compose/docker-compose.yml up -d --build
+# 打开 http://localhost:10000/gateway  看网关路由与实时实例
+# 打开 http://localhost:18888         看链路 / 指标 / 日志
+```
 
-### docker容器化介绍：https://www.ixigua.com/i6768731822999208462/
+---
 
-### Exceptionless视频介绍：https://www.ixigua.com/6861844321620984333/
+## 为什么重写
+
+原仓库是 .NET Core 3.0 + Ocelot + Consul + Apollo + Zipkin + Exceptionless 那一代方案。
+2026 年这套已经全部过时：运行时已 EOL、Zipkin exporter 已弃用、Apollo 需要 MySQL + Java、Consul 需要额外运维。
+
+这一版的原则是：**每一项能力只保留一个依赖，且都换成有官方长期支持的现代组件。**
+
+| 能力 | 旧方案 | 现在 | 说明 |
+|---|---|---|---|
+| 运行时 | .NET Core 3.0（EOL） | **.NET 10 LTS** | Minimal Hosting，SDK 由 `global.json` 钉住 |
+| 网关 | Ocelot | **YARP 2.3** | 微软官方，路由表可运行时热更新 |
+| 服务注册发现 | Consul | **Nacos 2.5** | 自带控制台，注册/发现/健康检查一体 |
+| 配置中心 | Apollo（MySQL + Java） | Nacos 配置 / `appsettings.json` | 详见下方"配置"一节 |
+| 链路追踪 | zipkin4net 手写埋点 | **OpenTelemetry** | 自动埋点，业务代码零侵入 |
+| 日志 | Exceptionless | **OTel Logs** | 与 trace 用同一个 traceId 串起来 |
+| 看板 | Zipkin + Exceptionless 两套 | **Aspire Dashboard** | 一个容器同时看 trace/metrics/logs |
+| 熔断 | Polly（demo 性质） | 网关主动健康检查 + 计划中 | 见路线图 |
+
+---
+
+## 架构
+
+```mermaid
+flowchart LR
+    C[客户端] -->|HTTP :10000| G[YARP 网关<br/>JWT + 限流]
+    G -->|服务发现| N[(Nacos<br/>注册中心 :8848)]
+    G --> A[AuthService]
+    G --> O[OrderService]
+    G --> P[ProductService]
+    O -->|AddServiceDiscoveryHttpClient| P
+    O -->|AddServiceDiscoveryHttpClient| A
+    A -.注册.-> N
+    O -.注册.-> N
+    P -.注册.-> N
+    G -.订阅.-> N
+    A & O & P & G -->|OTLP :18890| D[Aspire Dashboard<br/>:18888]
+```
+
+要点：
+
+- **唯一入口是网关**。业务服务在 compose 里不映射宿主端口，外部访问不到它们。
+- **服务之间调用也走服务发现**。`AddServiceDiscoveryHttpClient("product")` 每次请求解析一次实例地址，业务代码不知道自己跑在 Nacos 还是 K8s 上。
+- **网关路由是动态的**。每 5 秒从 Nacos 拉一次实例表，原子替换 YARP 路由；注册中心不可用时退回 `appsettings.json` 里的静态兜底路由（`revision: fallback`）。
+- **遥测直连 Dashboard**，中间不摆 Collector，少一个容器少一份配置。
+
+---
 
 ## 目录结构
 
-apollo-quick-start-1.5.0/sql文件夹是存放我自己建立的Apollo项目，如果所有的src内的代码都没有改变就希望能跑起来的话就需要将Sql文件导入到Apollo
+```
+.
+├── src/
+│   ├── Gateway/                      # YARP 网关：JWT 鉴权 + 限流 + 动态路由
+│   ├── Services/
+│   │   ├── AuthService/              # :10100  签发/校验 token
+│   │   ├── OrderService/             # :10200  跨服务调用示例
+│   │   └── ProductService/           # :10300  可水平扩展的示例服务
+│   └── BuildingBlocks/
+│       ├── ServiceDiscovery.Abstractions/   # 零第三方包：接口 + HttpClient 解析器
+│       ├── ServiceDiscovery.Nacos/          # 全仓库唯一引用 Nacos SDK 的地方
+│       └── Observability/                   # 全仓库唯一引用 OTel 的地方
+├── deploy/compose/
+│   ├── docker-compose.yml            # 一键编排（默认不暴露业务端口）
+│   ├── docker-compose.debug.yml      # override：把业务端口暴露出来便于调试
+│   └── .env.example                  # 端口 / 版本 / 内存上限
+├── scripts/                          # start / stop / status / logs / reset
+├── Directory.Packages.props          # 中央包管理（CPM），版本号只维护一处
+└── AspNetCoreCloud.slnx
+```
 
-src目录内是ApiGateServer网关、AuthService权限微服、OrderService订单微服、ProductService产品微服
+**依赖方向是刻意的**：业务服务只依赖 `BuildingBlocks`，`BuildingBlocks` 之内才允许出现 Nacos / OTel。
+所以换注册中心或换遥测后端，业务代码一行都不用动。
 
-配置中心及服务发现 https://pan.baidu.com/s/1FSLrnJBqc8rRN6RHn_CmHw
+---
 
-## 1、Apollo首先需要启动配置中心
+## 快速开始
 
-### 因为配置中心启动包有点大上传到github上会单个文件超出100mb出错，所以我放在了上面的百度云链接中。可以直接下载或者去:https://github.com/ctripcorp/apollo 下载。
+### 方式一：Docker Compose（推荐）
 
-启动Apollo需要Java 1.8或更高版本，MySQL5.6.6或更高版本。
+前置：Docker（含 compose 插件）。
 
-下载官方的Apollo或者使用我提供的百度云链接下载完成后，先在MySQL中导入apollo-quick-start-1.5.0/sql内的两个sql文件执行成功后会得到两个数据库（ApolloConfigDB、ApolloPortalDB）
+```bash
+git clone https://github.com/zhjgstc/AspNetCoreCloud.git
+cd AspNetCoreCloud
 
-之后打开demo.sh文件修改里面的数据库链接字符串类似：
+docker compose -f deploy/compose/docker-compose.yml up -d --build
 
-#### apollo config db info
+bash scripts/status.sh          # 等全部 healthy，并打印访问地址
+```
 
-apollo_config_db_url=jdbc:mysql://localhost:33061/ApolloConfigDB?characterEncoding=utf8（修改成自己的）
+想看负载均衡：
 
-apollo_config_db_username=root（修改成自己的）
+```bash
+docker compose -f deploy/compose/docker-compose.yml up -d --scale product=3
+curl -s localhost:10000/gateway/token                      # 取 token
+for i in $(seq 1 9); do
+  curl -s -H "Authorization: Bearer <token>" localhost:10000/api/product/instance; echo
+done                                                        # 会看到 3:3:3 轮询
+```
 
-apollo_config_db_password=root（修改成自己的）
+停止：
 
-#### apollo portal db info
+```bash
+docker compose -f deploy/compose/docker-compose.yml down        # 保留数据卷
+docker compose -f deploy/compose/docker-compose.yml down -v     # 连 Nacos 数据一起清
+```
 
-apollo_portal_db_url=jdbc:mysql://localhost:33061/ApolloPortalDB?characterEncoding=utf8（修改成自己的）
+`scripts/` 下的脚本是等价封装，会额外等待健康检查通过并打印地址：
+`start.sh` / `stop.sh` / `status.sh` / `logs.sh` / `reset.sh`。
 
-apollo_portal_db_username=root（修改成自己的）
+> 想从宿主直接访问业务服务（不经过网关）：
+> `docker compose -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.debug.yml up -d`
+> 注意这时不能再用 `--scale`，端口会冲突。
 
-apollo_portal_db_password=root（修改成自己的）
+### 方式二：本机 dotnet run
 
-接下来就是启动，在命令行输入： ./demo.sh start 启动成功后访问链接http://localhost:8070/， 登录后台的账号：apollo，密码；admin
+前置：.NET 10 SDK（`global.json` 钉 10.0.302）+ 一个能连上的 Nacos。
 
-Apollo不用的时候在命令行输入：./demo.sh stop
+```bash
+export Nacos__ServerAddresses__0=http://<nacos-host>:8848
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://<dashboard-host>:18890
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
-## 2、接下来就是启动Consul服务发现,一样需要下载可以用上面的百度云链接中下载或者去：https://github.com/hashicorp/consul 下载。
+dotnet run --project src/Services/ProductService --urls http://0.0.0.0:10300
+dotnet run --project src/Services/OrderService   --urls http://0.0.0.0:10200
+dotnet run --project src/Services/AuthService    --urls http://0.0.0.0:10100
+dotnet run --project src/Gateway                 --urls http://0.0.0.0:10000
+```
 
-### 不过我建议直接用我那个百度云，因为那里面我写了一个开发环境的简单启动命令行。文件夹内有一个start.sh文件，直接在命令行中执行：./start.sh
+不配 `OTEL_EXPORTER_OTLP_ENDPOINT` 时服务**只埋点不导出**，不会刷连接失败日志——本地没收集端也能安静地跑。
 
-浏览器访问：http://localhost:8500/ui/ ，如果能出来consul界面就是启动成功了。
+---
 
-## 3、链路追踪Zipkin
+## 端口与端点
 
-运行一个Zipkin : docker run -d -p 9411:9411 openzipkin/zipkin 
+| 端口 | 服务 | 说明 |
+|---|---|---|
+| 10000 | Gateway | 唯一对外入口 |
+| 10100 / 10200 / 10300 | Auth / Order / Product | 容器内端口，compose 默认不映射到宿主 |
+| 18848 | Nacos 控制台 | standalone + Derby，demo 用 |
+| 18888 | Aspire Dashboard | traces / metrics / logs |
+| 18889 / 18890 | OTLP | 18889 = gRPC，18890 = HTTP/protobuf |
 
-除docker外其他的启动方式：https://zipkin.io/ ，运行起来后先浏览器访问：http://localhost:9411/ ，最后等我们整个项目都跑一遍后回来看效果。
+网关自带诊断端点：
 
-## 4、接下来启动src内的所有AspNetCore项目都直接命令行执行：dotnet run 就好了。
+| 端点 | 用途 |
+|---|---|
+| `GET /gateway` | 列出所有可用端点 |
+| `GET /gateway/routes` | **最有用**：当前路由 + 每个服务的实例数与地址 |
+| `GET /gateway/token` | demo 用的 JWT（生产必须关掉 `EnableDemoTokenEndpoint`） |
+| `GET /health` `/health/live` `/health/ready` | 三态健康：总览 / 存活 / 就绪 |
 
-### 可以先把所有的AspNetCore项目都启动起来，然后去http://localhost:8500/ui/ 看看services列表是不是应该增加了三个服务。目前我没有把网关加入服务。
+业务示例：
 
-### ApiGateServer
+| 端点 | 说明 |
+|---|---|
+| `GET /api/auth/health` | 匿名可达（`AnonymousPaths` 配置了 `/api/auth`） |
+| `GET /api/auth/echo-token` | 回显 token 里的声明 |
+| `GET /api/order/lb` | Order 连续调 Product 若干次，看实例分发 |
+| `GET /api/product/instance` | 返回命中的实例（hostname + ip:port） |
+| `GET /api/product/test` | 受保护路由，无 token 返回 401 |
 
-Ocelot的网关是直接可以与consul服务发现配合的，而且这里我用的动态路由具体的内容请看找到ApiGateServer/ocelot.json
+---
 
-所有的访问链接
+## 关键设计
 
-一般在网关这里会直接用鉴权，所以我在项目内引用了JWT,项目地址：https://github.com/jwt-dotnet/jwt
+**1. 服务发现抽象层**
+`IServiceDiscovery` / `IServiceRegistry` 只有几个方法，Nacos 是它的一个实现。
+`ServiceDiscoveryHttpMessageHandler` 挂在 HttpClient 上，每次请求解析地址，因此**实例上下线对调用方是立即生效的**。
 
-如果浏览器访问：http://localhost:10000/home/index或者http://localhost:10000/order/add就会被拦截请求，返回一个jwt的token。
+**2. 换后端不改代码**
+注册中心在 `ServiceDiscovery.Nacos` 里，遥测后端只由 `OTEL_EXPORTER_OTLP_ENDPOINT` 决定。
+今天指向 Aspire Dashboard，明天指向 Jaeger / Grafana Tempo / 云厂商 SLS，代码不动。
 
-实际情况应该是拦截请求返回未登录，jwt token应该通过AuthService进行登录验证后返回。这个可以自行改造。
+**3. 网关是动态的，但不会"没有路由"**
+`NacosProxyConfigProvider` 定时拉取并原子替换整张路由表；Nacos 挂掉时 `appsettings.json` 里的 `-fallback` 静态路由接管，服务不至于整体 404。
 
-### AuthService
+**4. K8s 与非 K8s 共用一套 `src`**
+两条部署路径只替换三个点：服务发现（Nacos ↔ K8s Service DNS）、路由目标（动态 N 个 ↔ 静态 1 个）、配置来源（Nacos ↔ ConfigMap）。
+当前仓库是**非 K8s 路径**，K8s 版本在路线图里。
 
-AuthService内有TestController/Index使用了Polly，可以去查看。
+**5. 噪声过滤是默认配置**
+入站 `/health*`、出站 `/nacos/` 不生成 span——注册中心心跳每 5 秒一次，进链路纯属干扰。
 
-因为我们启动了网关，所有的service都可以通过网关来请求。浏览器访问：http://localhost:10000/authservice/test/index 就可以查看效果了。也可以vs来调试启动AuthService，在TestController/Index中加入一些断点来看效果更佳。
+---
 
-### OrderService
+## 已知取舍（读代码前建议先看）
 
-这个服务内我加入来Get和Post两种方式的服务消费，就是OrderService中去访问AuthService和ProductService。
+完整记录见 [`改造计划-非K8s版-NET10-YARP-Nacos.md`](改造计划-非K8s版-NET10-YARP-Nacos.md)，其中 D1–D14 是实测踩过的坑，包括：
 
-浏览器访问：http://localhost:10000/orderservice/home/test   这个是get请求的服务消费
+- Nacos SDK 的 gRPC 与 Nacos 2.5.x 握手不稳定 → 统一 `NamingUseRpc=false` 走 HTTP
+- 服务端 UDP 推送的订阅缓存在容器/NAT 下收不到 → 网关 `UseSubscribeCache=false` 直查
+- .NET 配置绑定器对集合是**追加**不是替换 → 集合类配置默认值一律留空
+- Aspire Dashboard 13.x 的 OTLP 端口是分开的：18889 只有 gRPC，18890 才是 HTTP
+- 官方 .NET 镜像已内置 uid 1654 的 `app` 用户 → Dockerfile 里不能再 `useradd` 同名 uid
 
-浏览器访问：http://localhost:10000/orderservice/home/testpost 这个是post请求的服务消费
+**不建议直接上生产的地方**（demo 简化，清单在这，改完再上）：
 
-### 最后我们浏览器访问：http://localhost:9411/ 来查看链路
+- JWT 签名 key 写在 `appsettings.json` 里，必须换成密钥管理
+- `/gateway/token` 是免登录签发端点，生产要关掉
+- Nacos 是 standalone + Derby 且**默认关闭鉴权**，生产要集群 + 外置 MySQL + 开鉴权
+- Aspire Dashboard 无鉴权、数据存内存、重启即丢，只适合本地和演示
 
-## 5、Exceptionless日志收集
+---
 
-### 通过命令行进入Exceptionless-5.0.0目录，修改docker-compose.yml内带192.168.31.185的ip，改成自己能访问得到的。如果是本地的直接改成localhost也可以。
+## 路线图
 
-### 然后执行 docker-compose up -d 完成搭建过程会有点久，特别是拉去mcr.microsoft的镜像会特别慢。
+- [ ] **M6｜K8s 部署路径**：同一套 `src`，Helm/ manifests，服务发现换成 K8s Service DNS
+- [ ] 网关熔断与重试（YARP 需要自定义 `IForwarderHttpClientFactory`）
+- [ ] Nacos 配置中心接入（替换 `appsettings.json` 中的环境相关配置）
+- [ ] 生产级遥测后端切换示例（OTel Collector + Tempo / Jaeger）
+- [ ] 清理历史遗留目录（`apollo-quick-start-1.5.0/`、`Exceptionless-5.0.0/`）
+- [ ] GitHub Actions：构建镜像、跑 `dotnet build`、推送到 GHCR
 
-其他具体的Exceptionless可以参考官方说明 https://github.com/exceptionless/Exceptionless/wiki ，页面头部有个视频连接可以稍微看看。
+---
 
+## 历史版本
 
+README 顶部的架构图与视频链接对应的是 2020 年的 .NET Core 3.0 版本（Ocelot + Consul + Apollo + Zipkin），
+保留仅作对照，与当前代码**不一致**，请以本文和 `src/` 为准。
 
+## License
 
+MIT

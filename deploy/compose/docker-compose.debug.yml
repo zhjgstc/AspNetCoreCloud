@@ -1,0 +1,21 @@
+# 调试用 override：把业务服务端口暴露到宿主，方便绕过网关直接 curl 单个服务。
+#
+# 用法：
+#   docker compose \
+#     -f deploy/compose/docker-compose.yml \
+#     -f deploy/compose/docker-compose.debug.yml \
+#     up -d
+#
+# ⚠ 一旦映射了固定宿主端口，就不能再 `--scale`（同一个宿主端口只能绑一次）。
+#   要验证负载均衡，请用不带本文件的默认编排。
+
+services:
+  auth:
+    ports:
+      - "${AUTH_PORT:-10100}:10100"
+  order:
+    ports:
+      - "${ORDER_PORT:-10200}:10200"
+  product:
+    ports:
+      - "${PRODUCT_PORT:-10300}:10300"

@@ -1,0 +1,194 @@
+# AspNetCoreCloud —— 非 K8s 一键编排
+#
+# .NET 10 + YARP 网关 + Nacos 注册发现 + OpenTelemetry（Aspire Dashboard 看板）
+#
+# 用法（在仓库根目录执行）：
+#   docker compose -f deploy/compose/docker-compose.yml up -d --build
+#   bash scripts/status.sh
+#   docker compose -f deploy/compose/docker-compose.yml down
+#
+# 端口：
+#   10000 gateway   10100 auth   10200 order   10300 product
+#   18848 Nacos 控制台   18888 Aspire Dashboard（18889 = OTLP/gRPC，18890 = OTLP/HTTP）
+#
+# 设计约束（改这个文件前请先读）：
+#   1. 不写 container_name —— 否则 `docker compose up --scale product=3` 会因名字冲突失败。
+#   2. 日志必须限流 —— 不配 max-size 会一路写满宿主磁盘。
+#   3. stop_grace_period 必须给足 —— 默认只有 10 秒，服务来不及从 Nacos 注销就被 SIGKILL，
+#      注册中心里会留下已经不存在的脏实例。
+#   4. 服务必须等 Nacos healthy 再起 —— Nacos 冷启动 30~60 秒，抢跑会注册失败。
+
+name: aspnetcorecloud
+
+# 所有容器统一的日志轮转策略
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ───────────────────────── 基础设施 ─────────────────────────
+
+  nacos:
+    image: nacos/nacos-server:${NACOS_TAG:-v2.5.4-slim}
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: ip
+      # demo 默认关闭鉴权：省去初始化管理员密码这一步，让 `up` 之后立刻可用。
+      # 生产必须改成 true，并补 NACOS_AUTH_TOKEN / NACOS_AUTH_IDENTITY_KEY / VALUE，
+      # 同时把 standalone + Derby 换成集群 + 外置 MySQL。
+      NACOS_AUTH_ENABLE: "${NACOS_AUTH_ENABLE:-false}"
+      JVM_XMS: "${NACOS_JVM_XMS:-256m}"
+      JVM_XMX: "${NACOS_JVM_XMX:-256m}"
+      JVM_XMN: "${NACOS_JVM_XMN:-128m}"
+    ports:
+      - "${NACOS_PORT:-18848}:8848"
+    volumes:
+      - nacos-data:/home/nacos/data
+      - nacos-logs:/home/nacos/logs
+    healthcheck:
+      # nacos-server 镜像自带 curl；standalone 冷启动慢，start_period 给 40 秒
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8848/nacos/v1/ns/operator/metrics || exit 1"]
+      interval: 5s
+      timeout: 3s
+      start_period: 40s
+      retries: 30
+    mem_limit: ${NACOS_MEM_LIMIT:-640m}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:${ASPIRE_TAG:-13.6.0}
+    environment:
+      # 允许 OTLP 走明文（容器内回环/内网，不涉密）
+      ASPIRE_ALLOW_UNSECURED_TRANSPORT: "true"
+      # demo 免登录；去掉这一项则启动时会在日志里打印一次性登录 token
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "${DASHBOARD_PORT:-18888}:18888"
+      - "${DASHBOARD_OTLP_GRPC_PORT:-18889}:18889"
+      - "${DASHBOARD_OTLP_HTTP_PORT:-18890}:18890"
+    mem_limit: ${DASHBOARD_MEM_LIMIT:-256m}
+    restart: unless-stopped
+    logging: *default-logging
+
+  # ───────────────────────── 业务服务 ─────────────────────────
+
+  auth:
+    image: ${IMAGE_PREFIX:-aspnetcorecloud}/auth:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: src/Services/AuthService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:10100
+      Nacos__ServerAddresses__0: http://nacos:8848
+      Nacos__ServiceName: auth
+      # 见 D2：nacos-sdk-csharp 的 gRPC 与 Nacos 2.5.x 握手不稳定，统一走 HTTP
+      Nacos__NamingUseRpc: "false"
+      # 见 D4：订阅缓存靠服务端 UDP 推送，容器/NAT 下更新到不了，一律直查拿最新实例
+      Nacos__UseSubscribeCache: "false"
+      # 走 HTTP/protobuf（18890）而不是 gRPC（18889）：
+      # 实测容器网络下 gRPC 通道会被 dashboard 侧判为 "Error reading message /
+      # client reset the request stream"，数据进不去；HTTP 通道稳定。
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18890
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: auth
+      OTEL_TRACES_SAMPLER: always_on
+    # 业务服务刻意不映射宿主端口：唯一对外入口是网关 10000。
+    # 两个理由：① 微服务不该每个都直接暴露；② `up --scale product=3` 时
+    # 固定端口映射会互相冲突，第二个容器直接起不来。
+    # 调试要直连某个服务：加 -f deploy/compose/docker-compose.debug.yml
+    depends_on:
+      nacos:
+        condition: service_healthy
+    mem_limit: ${SERVICE_MEM_LIMIT:-384m}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+
+  order:
+    image: ${IMAGE_PREFIX:-aspnetcorecloud}/order:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: src/Services/OrderService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:10200
+      Nacos__ServerAddresses__0: http://nacos:8848
+      Nacos__ServiceName: order
+      Nacos__NamingUseRpc: "false"
+      Nacos__UseSubscribeCache: "false"
+      # 走 HTTP/protobuf（18890）而不是 gRPC（18889）：
+      # 实测容器网络下 gRPC 通道会被 dashboard 侧判为 "Error reading message /
+      # client reset the request stream"，数据进不去；HTTP 通道稳定。
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18890
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: order
+      OTEL_TRACES_SAMPLER: always_on
+    depends_on:
+      nacos:
+        condition: service_healthy
+    mem_limit: ${SERVICE_MEM_LIMIT:-384m}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+
+  product:
+    image: ${IMAGE_PREFIX:-aspnetcorecloud}/product:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: src/Services/ProductService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:10300
+      Nacos__ServerAddresses__0: http://nacos:8848
+      Nacos__ServiceName: product
+      Nacos__NamingUseRpc: "false"
+      Nacos__UseSubscribeCache: "false"
+      # 走 HTTP/protobuf（18890）而不是 gRPC（18889）：
+      # 实测容器网络下 gRPC 通道会被 dashboard 侧判为 "Error reading message /
+      # client reset the request stream"，数据进不去；HTTP 通道稳定。
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18890
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: product
+      OTEL_TRACES_SAMPLER: always_on
+    depends_on:
+      nacos:
+        condition: service_healthy
+    mem_limit: ${SERVICE_MEM_LIMIT:-384m}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+
+  gateway:
+    image: ${IMAGE_PREFIX:-aspnetcorecloud}/gateway:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: src/Gateway/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:10000
+      Nacos__ServerAddresses__0: http://nacos:8848
+      Nacos__ServiceName: gateway
+      Nacos__NamingUseRpc: "false"
+      # 网关是路由决策方，必须直查（见 D4）
+      Nacos__UseSubscribeCache: "false"
+      # 走 HTTP/protobuf（18890）而不是 gRPC（18889）：
+      # 实测容器网络下 gRPC 通道会被 dashboard 侧判为 "Error reading message /
+      # client reset the request stream"，数据进不去；HTTP 通道稳定。
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18890
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: gateway
+      OTEL_TRACES_SAMPLER: always_on
+    ports:
+      - "${GATEWAY_PORT:-10000}:10000"
+    depends_on:
+      nacos:
+        condition: service_healthy
+    mem_limit: ${SERVICE_MEM_LIMIT:-384m}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+
+volumes:
+  nacos-data:
+  nacos-logs:
