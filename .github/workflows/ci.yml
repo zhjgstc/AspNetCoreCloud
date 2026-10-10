@@ -101,8 +101,10 @@ jobs:
 
   publish:
     name: 推送镜像到 GHCR
-    needs: build
-    if: github.event_name == 'push'
+    # 依赖 smoke：只推「已经跑通全套 compose 冒烟」的镜像，避免把坏镜像推上去
+    needs: [build, smoke]
+    # push（master / tag）自动推；也可以到 Actions 页面手动 Run workflow 重推
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -136,11 +138,16 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}
+          # latest 只跟默认分支（master）走：tag 发布不会覆盖 latest，
+          # 否则打 v2.0.0 时 latest 会被老版本镜像抢占。
+          # 注意：compose 里 TAG 默认值是 latest，所以这一条必须有，
+          # 不然用户不设 TAG 直接 up --no-build 会因为标签不存在而拉不到镜像。
           tags: |
             type=ref,event=branch
             type=ref,event=tag
             type=semver,pattern={{version}}
             type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: 构建并推送
         uses: docker/build-push-action@v6

@@ -110,13 +110,18 @@ bash scripts/status.sh          # 等全部 healthy，并打印访问地址
 
 ```bash
 export IMAGE_PREFIX=ghcr.io/zhjgstc
-export TAG=main                       # 或某个 tag，如 v2.0.0
+export TAG=latest        # 默认分支最新构建；也可填 master / v2.0.0 / sha-1a2b3c4
 docker compose -f deploy/compose/docker-compose.yml pull
 docker compose -f deploy/compose/docker-compose.yml up -d --no-build
 ```
 
+镜像由 CI 自动发布（`publish` job），**不需要任何 secret 配置** —— 用的是 GitHub 内置 `GITHUB_TOKEN`。
+每个服务一个包：`ghcr.io/zhjgstc/{gateway,auth,order,product}`；
+标签规则：默认分支 → `latest` + `master` + `sha-<短sha>`，打 tag → `v2.0.0` + `2.0.0`。
+
 > 如果 pull 时报权限错误，说明包还没设为公开：
 > 仓库 → Packages → 对应包 → Package settings → 把 visibility 改成 Public。
+> 想手动重推一次（比如改了 base 镜像）：Actions → CI → Run workflow。
 
 想看负载均衡：
 
