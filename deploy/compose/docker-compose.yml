@@ -34,7 +34,10 @@ services:
     image: nacos/nacos-server:${NACOS_TAG:-v2.5.4-slim}
     environment:
       MODE: standalone
-      PREFER_HOST_MODE: ip
+      # 必须是 hostname：实测 `ip` 模式下 Nacos 2.5.4 在 compose 网络里取不到网卡地址，
+      # 启动即抛 NullPointerException（InetUtils.refreshIp），容器陷入重启循环。
+      # hostname 模式由容器名解析，compose 内最稳。
+      PREFER_HOST_MODE: hostname
       # demo 默认关闭鉴权：省去初始化管理员密码这一步，让 `up` 之后立刻可用。
       # 生产必须改成 true，并补 NACOS_AUTH_TOKEN / NACOS_AUTH_IDENTITY_KEY / VALUE，
       # 同时把 standalone + Derby 换成集群 + 外置 MySQL。

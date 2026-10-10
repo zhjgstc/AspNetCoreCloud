@@ -539,6 +539,10 @@ new ClusterConfig {
 | D12 | `product` 的 `/api/product/instance` 原先只返回端口，scale 出来的实例端口都一样，看不出负载均衡到底生效没有 | 改成返回 `hostname|ip:port`（容器 hostname 即容器短 ID，天然唯一） |
 | D13 | OTLP 走 gRPC（18889）时，Aspire Dashboard 侧刷 `Error reading message / client reset the request stream`，数据进不去 | 改走 **HTTP/protobuf（18890）**，实测稳定、零错误 |
 | D14 | OTLP 导出器内置的 HttpClient 默认 Information 级，每批导出都打日志，几分钟刷满 | Observability 构建块里把 `System.Net.Http.HttpClient` 压到 Warning |
+| **D15** | Nacos 2.5.4 在 compose 网络里用 `PREFER_HOST_MODE: ip` 启动即 `NullPointerException`（`InetUtils.refreshIp`），容器陷入重启循环；网关拿不到实例后退回 `"revision":"fallback"` 静态路由 | 改成 **`PREFER_HOST_MODE: hostname`**（由容器名解析）。改后 `up` 即 healthy，网关路由恢复动态 revision，四服务全部注册成功 |
+
+> D15 修复后复测（2026-10-10）：nacos / gateway / auth / order / product 全 healthy；
+> `/gateway/routes` 返回动态 revision（非 fallback）；`--scale product=3` 后 6 次调用 **2:2:2** 轮询；无 token 401。
 
 ---
 
