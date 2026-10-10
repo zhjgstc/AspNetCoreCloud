@@ -1,5 +1,9 @@
 # AspNetCoreCloud
 
+[![CI](https://github.com/zhjgstc/AspNetCoreCloud/actions/workflows/ci.yml/badge.svg)](https://github.com/zhjgstc/AspNetCoreCloud/actions/workflows/ci.yml)
+![.NET](https://img.shields.io/badge/.NET-10%20LTS-512BD4)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 > 一个**面向 2026 的 .NET 微服务参考架构**：.NET 10 + YARP 网关 + Nacos 服务发现 + OpenTelemetry 可观测。
 > 目标不是"能跑"，而是**让人 clone 下来一条命令就能看到完整调用链**。
 
@@ -101,6 +105,18 @@ docker compose -f deploy/compose/docker-compose.yml up -d --build
 
 bash scripts/status.sh          # 等全部 healthy，并打印访问地址
 ```
+
+不想本地构建 4 个 .NET 镜像（约 3–5 分钟），可以直接用 CI 推送到 GHCR 的预构建镜像：
+
+```bash
+export IMAGE_PREFIX=ghcr.io/zhjgstc
+export TAG=main                       # 或某个 tag，如 v2.0.0
+docker compose -f deploy/compose/docker-compose.yml pull
+docker compose -f deploy/compose/docker-compose.yml up -d --no-build
+```
+
+> 如果 pull 时报权限错误，说明包还没设为公开：
+> 仓库 → Packages → 对应包 → Package settings → 把 visibility 改成 Public。
 
 想看负载均衡：
 
@@ -269,7 +285,8 @@ demo 阶段可以用 `GET /gateway/token` 现取一个（签发用的 key 写在
 
 ## 路线图
 
-- [ ] **M6｜K8s 部署路径**：同一套 `src`，Helm/ manifests，服务发现换成 K8s Service DNS
+- [x] **CI + GHCR**：`dotnet build` + compose 真机冒烟 + 四镜像推送（`.github/workflows/ci.yml`）
+- [ ] **M6｜K8s 部署路径**：同一套 `src`，Helm chart，服务发现换成 K8s Service DNS
 - [ ] 网关熔断与重试（YARP 需要自定义 `IForwarderHttpClientFactory`）
 - [ ] Nacos 配置中心接入（替换 `appsettings.json` 中的环境相关配置）
 - [ ] 生产级遥测后端切换示例（OTel Collector + Tempo / Jaeger）
@@ -282,6 +299,8 @@ demo 阶段可以用 `GET /gateway/token` 现取一个（签发用的 key 写在
 
 README 顶部的架构图与视频链接对应的是 2020 年的 .NET Core 3.0 版本（Ocelot + Consul + Apollo + Zipkin），
 保留仅作对照，与当前代码**不一致**，请以本文和 `src/` 为准。
+
+那一版已打 tag **`v1.0-netcore3.0`** 存档，可以随时 `git checkout v1.0-netcore3.0` 回去看。
 
 ## License
 
